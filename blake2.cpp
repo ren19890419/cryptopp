@@ -28,7 +28,7 @@ NAMESPACE_BEGIN(CryptoPP)
 inline __m128i MM_SET_EPI64X(const word64 a, const word64 b)
 {
     const word64 t[2] = {b,a}; __m128i r;
-    memcpy(&r, &t, sizeof(r));
+    memcpy(&r, &t, sizeof(t));
     return r;
 }
 #else
@@ -342,7 +342,7 @@ void BLAKE2_Base<W, T_64bit>::UncheckedSetKey(const byte *key, unsigned int leng
 template <class W, bool T_64bit>
 BLAKE2_Base<W, T_64bit>::BLAKE2_Base() : m_state(1), m_block(1), m_digestSize(DIGESTSIZE), m_treeMode(false)
 {
-    UncheckedSetKey(NULL, 0, g_nullNameValuePairs);
+    UncheckedSetKey(NULLPTR, 0, g_nullNameValuePairs);
     Restart();
 }
 
@@ -351,7 +351,7 @@ BLAKE2_Base<W, T_64bit>::BLAKE2_Base(bool treeMode, unsigned int digestSize) : m
 {
     CRYPTOPP_ASSERT(digestSize <= DIGESTSIZE);
 
-    UncheckedSetKey(NULL, 0, g_nullNameValuePairs);
+    UncheckedSetKey(NULLPTR, 0, MakeParameters(Name::DigestSize(), (int)digestSize)(Name::TreeMode(), treeMode, false));
     Restart();
 }
 
@@ -392,7 +392,7 @@ void BLAKE2_Base<W, T_64bit>::Restart(const BLAKE2_ParameterBlock<T_64bit>& bloc
     State& state = *m_state.data();
     state.t[0] = state.t[1] = 0, state.f[0] = state.f[1] = 0, state.length = 0;
 
-    if (counter != NULL)
+    if (counter != NULLPTR)
     {
         state.t[0] = counter[0];
         state.t[1] = counter[1];
@@ -3905,7 +3905,6 @@ static void BLAKE2_NEON_Compress64(const byte* input, BLAKE2_State<word64, true>
     #define BLAKE2B_LOAD_MSG_9_4(b0, b1) \
     do { b0 = vextq_u64(m5, m7, 1); b1 = vcombine_u64(vget_low_u64(m6), vget_low_u64(m0)); } while(0)
 
-    #undef BLAKE2B_LOAD_MSG_10_1
     #define BLAKE2B_LOAD_MSG_10_1(b0, b1) \
     do { b0 = vcombine_u64(vget_low_u64(m0), vget_low_u64(m1)); b1 = vcombine_u64(vget_low_u64(m2), vget_low_u64(m3)); } while(0)
 

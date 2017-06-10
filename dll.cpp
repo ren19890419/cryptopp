@@ -5,15 +5,10 @@
 
 #include "dll.h"
 #include "config.h"
+#include "iterhash.h"
 
-// TODO: fix the C4589 warnings
-#if CRYPTOPP_MSC_VERSION
-# pragma warning(disable: 4589)
-#endif
-
-#if CRYPTOPP_MSC_VERSION
-# pragma warning(default: 4660)
-#endif
+// Cast from FARPROC to funcptr with args, http://stackoverflow.com/q/4192058/608639
+#pragma warning(disable: 4191)
 
 #if defined(CRYPTOPP_EXPORTS) && defined(CRYPTOPP_WIN32_AVAILABLE)
 #include <windows.h>
@@ -58,25 +53,22 @@ USING_NAMESPACE(CryptoPP)
 
 using std::set_new_handler;
 
-static PNew s_pNew = NULL;
-static PDelete s_pDelete = NULL;
+static PNew s_pNew = NULLPTR;
+static PDelete s_pDelete = NULLPTR;
 
 static void * New (size_t size)
 {
 	void *p;
-	while ((p = malloc(size)) == NULL)
+	while ((p = malloc(size)) == NULLPTR)
 		CallNewHandler();
 
 	return p;
 }
 
-// Cast from FARPROC to funcptr with args, http://stackoverflow.com/q/4192058/608639
-#pragma warning(disable: 4191)
-
 static void SetNewAndDeleteFunctionPointers()
 {
-	void *p = NULL;
-	HMODULE hModule = NULL;
+	void *p = NULLPTR;
+	HMODULE hModule = NULLPTR;
 	MEMORY_BASIC_INFORMATION mbi;
 
 	while (true)

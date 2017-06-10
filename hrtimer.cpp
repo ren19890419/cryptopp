@@ -30,8 +30,6 @@
 
 NAMESPACE_BEGIN(CryptoPP)
 
-#ifndef CRYPTOPP_IMPORTS
-
 #if defined(CRYPTOPP_WIN32_AVAILABLE)
 static TimerWord InitializePerformanceCounterFrequency()
 {
@@ -47,6 +45,8 @@ inline TimerWord PerformanceCounterFrequency()
 	return freq;
 }
 #endif
+
+#ifndef CRYPTOPP_IMPORTS
 
 double TimerBase::ConvertTo(TimerWord t, Unit unit)
 {
@@ -97,7 +97,7 @@ TimerWord Timer::GetCurrentTimerValue()
 	return now.QuadPart;
 #elif defined(CRYPTOPP_UNIX_AVAILABLE)
 	timeval now;
-	gettimeofday(&now, NULL);
+	gettimeofday(&now, NULLPTR);
 	return (TimerWord)now.tv_sec * 1000000 + now.tv_usec;
 #else
 	// clock_t now;

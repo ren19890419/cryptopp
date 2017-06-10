@@ -19,7 +19,7 @@ NAMESPACE_BEGIN(CryptoPP)
 //! \brief Legacy block cipher for LegacyEncryptor, LegacyDecryptor, LegacyEncryptorWithMAC and LegacyDecryptorWithMAC
 typedef DES_EDE2 LegacyBlockCipher;
 //! \brief Legacy hash for use with LegacyEncryptorWithMAC and LegacyDecryptorWithMAC
-typedef SHA LegacyHashModule;
+typedef SHA1 LegacyHashModule;
 //! \brief Legacy HMAC for use withLegacyEncryptorWithMAC and LegacyDecryptorWithMAC
 typedef HMAC<LegacyHashModule> LegacyMAC;
 
@@ -92,13 +92,13 @@ public:
 	//! \brief Construct a DataEncryptor
 	//! \param passphrase a C-String password
 	//! \param attachment a BufferedTransformation to attach to this object
-	DataEncryptor(const char *passphrase, BufferedTransformation *attachment = NULL);
+	DataEncryptor(const char *passphrase, BufferedTransformation *attachment = NULLPTR);
 
 	//! \brief Construct a DataEncryptor
 	//! \param passphrase a byte string password
 	//! \param passphraseLength the length of the byte string password
 	//! \param attachment a BufferedTransformation to attach to this object
-	DataEncryptor(const byte *passphrase, size_t passphraseLength, BufferedTransformation *attachment = NULL);
+	DataEncryptor(const byte *passphrase, size_t passphraseLength, BufferedTransformation *attachment = NULLPTR);
 
 protected:
 	void FirstPut(const byte *);
@@ -132,14 +132,14 @@ public:
 	//! \param passphrase a C-String password
 	//! \param attachment a BufferedTransformation to attach to this object
 	//! \param throwException a flag specifiying whether an Exception should be thrown on error
-	DataDecryptor(const char *passphrase, BufferedTransformation *attachment = NULL, bool throwException=true);
+	DataDecryptor(const char *passphrase, BufferedTransformation *attachment = NULLPTR, bool throwException=true);
 
 	//! \brief Constructs a DataDecryptor
 	//! \param passphrase a byte string password
 	//! \param passphraseLength the length of the byte string password
 	//! \param attachment a BufferedTransformation to attach to this object
 	//! \param throwException a flag specifiying whether an Exception should be thrown on error
-	DataDecryptor(const byte *passphrase, size_t passphraseLength, BufferedTransformation *attachment = NULL, bool throwException=true);
+	DataDecryptor(const byte *passphrase, size_t passphraseLength, BufferedTransformation *attachment = NULLPTR, bool throwException=true);
 
 	enum State {WAITING_FOR_KEYCHECK, KEY_GOOD, KEY_BAD};
 	State CurrentState() const {return m_state;}
@@ -180,16 +180,22 @@ template <class BC, class H, class MAC, class Info>
 class DataEncryptorWithMAC : public ProxyFilter
 {
 public:
+	CRYPTOPP_CONSTANT(BLOCKSIZE  = Info::BLOCKSIZE)
+	CRYPTOPP_CONSTANT(KEYLENGTH  = Info::KEYLENGTH)
+	CRYPTOPP_CONSTANT(SALTLENGTH = Info::SALTLENGTH)
+	CRYPTOPP_CONSTANT(DIGESTSIZE = Info::DIGESTSIZE)
+	CRYPTOPP_CONSTANT(ITERATIONS = Info::ITERATIONS)
+
 	//! \brief Constructs a DataEncryptorWithMAC
 	//! \param passphrase a C-String password
 	//! \param attachment a BufferedTransformation to attach to this object
-	DataEncryptorWithMAC(const char *passphrase, BufferedTransformation *attachment = NULL);
+	DataEncryptorWithMAC(const char *passphrase, BufferedTransformation *attachment = NULLPTR);
 
 	//! \brief Constructs a DataEncryptorWithMAC
 	//! \param passphrase a byte string password
 	//! \param passphraseLength the length of the byte string password
 	//! \param attachment a BufferedTransformation to attach to this object
-	DataEncryptorWithMAC(const byte *passphrase, size_t passphraseLength, BufferedTransformation *attachment = NULL);
+	DataEncryptorWithMAC(const byte *passphrase, size_t passphraseLength, BufferedTransformation *attachment = NULLPTR);
 
 protected:
 	void FirstPut(const byte *inString) {CRYPTOPP_UNUSED(inString);}
@@ -220,18 +226,24 @@ template <class BC, class H, class MAC, class Info>
 class DataDecryptorWithMAC : public ProxyFilter
 {
 public:
+	CRYPTOPP_CONSTANT(BLOCKSIZE  = Info::BLOCKSIZE)
+	CRYPTOPP_CONSTANT(KEYLENGTH  = Info::KEYLENGTH)
+	CRYPTOPP_CONSTANT(SALTLENGTH = Info::SALTLENGTH)
+	CRYPTOPP_CONSTANT(DIGESTSIZE = Info::DIGESTSIZE)
+	CRYPTOPP_CONSTANT(ITERATIONS = Info::ITERATIONS)
+
 	//! \brief Constructs a DataDecryptor
 	//! \param passphrase a C-String password
 	//! \param attachment a BufferedTransformation to attach to this object
 	//! \param throwException a flag specifiying whether an Exception should be thrown on error
-	DataDecryptorWithMAC(const char *passphrase, BufferedTransformation *attachment = NULL, bool throwException=true);
+	DataDecryptorWithMAC(const char *passphrase, BufferedTransformation *attachment = NULLPTR, bool throwException=true);
 
 	//! \brief Constructs a DataDecryptor
 	//! \param passphrase a byte string password
 	//! \param passphraseLength the length of the byte string password
 	//! \param attachment a BufferedTransformation to attach to this object
 	//! \param throwException a flag specifiying whether an Exception should be thrown on error
-	DataDecryptorWithMAC(const byte *passphrase, size_t passphraseLength, BufferedTransformation *attachment = NULL, bool throwException=true);
+	DataDecryptorWithMAC(const byte *passphrase, size_t passphraseLength, BufferedTransformation *attachment = NULLPTR, bool throwException=true);
 
 	typename DataDecryptor<BC,H,Info>::State CurrentState() const;
 	bool CheckLastMAC() const;

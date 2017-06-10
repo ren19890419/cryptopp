@@ -1,8 +1,5 @@
-CXXFLAGS ?= -DNDEBUG -g2 -Os -fPIC -pipe
-
-# The following options reduce code size, but breaks link or makes link very slow on some systems
-# CXXFLAGS += -ffunction-sections -fdata-sections
-# LDFLAGS += -Wl,--gc-sections
+# Default CXXFLAGS if none were provided
+CXXFLAGS ?= -DNDEBUG -g2 -O3 -fPIC -pipe
 
 AR ?= ar
 ARFLAGS ?= cr
@@ -91,6 +88,70 @@ ifeq ($(IS_ARM_EMBEDDED),1)
   CXXFLAGS += $(ARM_EMBEDDED_FLAGS) --sysroot=$(ARM_EMBEDDED_SYSROOT)
 endif
 
+# No ASM for Travis testing
+ifeq ($(findstring no-asm,$(MAKECMDGOALS)),no-asm)
+  ifeq ($(findstring -DCRYPTOPP_DISABLE_ASM,$(CXXFLAGS)),)
+    CXXFLAGS += -DCRYPTOPP_DISABLE_ASM
+  endif # CXXFLAGS
+endif # No ASM
+
+# Undefined Behavior Sanitizer (UBsan) testing. Issue 'make ubsan'.
+ifeq ($(findstring ubsan,$(MAKECMDGOALS)),ubsan)
+  ifeq ($(findstring -fsanitize=undefined,$(CXXFLAGS)),)
+    CXXFLAGS += -fsanitize=undefined
+  endif # CXXFLAGS
+  ifeq ($(findstring -DCRYPTOPP_COVERAGE,$(CXXFLAGS)),)
+    CXXFLAGS += -DCRYPTOPP_COVERAGE
+  endif # CXXFLAGS
+endif # UBsan
+
+# Address Sanitizer (Asan) testing. Issue 'make asan'.
+ifeq ($(findstring asan,$(MAKECMDGOALS)),asan)
+  ifeq ($(findstring -fsanitize=address,$(CXXFLAGS)),)
+    CXXFLAGS += -fsanitize=address
+  endif # CXXFLAGS
+  ifeq ($(findstring -DCRYPTOPP_COVERAGE,$(CXXFLAGS)),)
+    CXXFLAGS += -DCRYPTOPP_COVERAGE
+  endif # CXXFLAGS
+  ifeq ($(findstring -fno-omit-frame-pointer,$(CXXFLAGS)),)
+    CXXFLAGS += -fno-omit-frame-pointer
+  endif # CXXFLAGS
+endif # Asan
+
+# LD gold linker testing. Triggered by 'LD=ld.gold'.
+ifeq ($(findstring ld.gold,$(LD)),ld.gold)
+  ifeq ($(findstring -fuse-ld=gold,$(CXXFLAGS)),)
+    ELF_FORMAT := $(shell file `which ld.gold` 2>&1 | cut -d":" -f 2 | $(EGREP) -i -c "elf")
+    ifneq ($(ELF_FORMAT),0)
+      LDFLAGS += -fuse-ld=gold
+    endif # ELF/ELF64
+  endif # CXXFLAGS
+endif # Gold
+
+# Valgrind testing. Issue 'make valgrind'.
+ifneq ($(filter valgrind,$(MAKECMDGOALS)),)
+  # Tune flags; see http://valgrind.org/docs/manual/quick-start.html
+  CXXFLAGS := $(CXXFLAGS:-g%=-g3)
+  CXXFLAGS := $(CXXFLAGS:-O%=-O1)
+  CXXFLAGS := $(CXXFLAGS:-xO%=-xO1)
+  ifeq ($(findstring -DCRYPTOPP_VALGRIND,$(CXXFLAGS)),)
+    CXXFLAGS += -DCRYPTOPP_VALGRIND
+  endif # -DCRYPTOPP_VALGRIND
+endif # Valgrind
+
+# Debug testing on GNU systems. Triggered by -DDEBUG.
+#   Newlib test due to http://sourceware.org/bugzilla/show_bug.cgi?id=20268
+ifneq ($(filter -DDEBUG -DDEBUG=1,$(CXXFLAGS)),)
+  USING_GLIBCXX := $(shell $(CXX) -x c++ $(CXXFLAGS) -E adhoc.cpp.proto 2>&1 | $(EGREP) -i -c "__GLIBCXX__")
+  ifneq ($(USING_GLIBCXX),0)
+    ifeq ($(HAS_NEWLIB),0)
+      ifeq ($(findstring -D_GLIBCXX_DEBUG,$(CXXFLAGS)),)
+        CXXFLAGS += -D_GLIBCXX_DEBUG
+      endif # CXXFLAGS
+    endif # HAS_NEWLIB
+  endif # USING_GLIBCXX
+endif # GNU Debug build
+
 # Dead code stripping. Issue 'make lean'.
 ifeq ($(findstring lean,$(MAKECMDGOALS)),lean)
   ifeq ($(findstring -ffunction-sections,$(CXXFLAGS)),)
@@ -99,7 +160,7 @@ ifeq ($(findstring lean,$(MAKECMDGOALS)),lean)
   ifeq ($(findstring -fdata-sections,$(CXXFLAGS)),)
     CXXFLAGS += -fdata-sections
   endif # CXXFLAGS
-  ifeq ($(IS_IOS),1)
+  ifneq ($(IS_IOS),0)
     ifeq ($(findstring -Wl,-dead_strip,$(LDFLAGS)),)
       LDFLAGS += -Wl,-dead_strip
     endif # CXXFLAGS
@@ -111,13 +172,13 @@ ifeq ($(findstring lean,$(MAKECMDGOALS)),lean)
 endif # Dead code stripping
 
 # List cryptlib.cpp first, then cpu.cpp, then integer.cpp to tame C++ static initialization problems.
-SRCS := cryptlib.cpp cpu.cpp integer.cpp $(filter-out cryptlib.cpp cpu.cpp integer.cpp pch.cpp simple.cpp winpipes.cpp cryptlib_bds.cpp,$(wildcard *.cpp))
+SRCS := cryptlib.cpp cpu.cpp integer.cpp $(filter-out cryptlib.cpp cpu.cpp integer.cpp pch.cpp simple.cpp winpipes.cpp cryptlib_bds.cpp,$(sort $(wildcard *.cpp)))
 
 # List cryptlib.cpp first, then cpu.cpp, then integer.cpp to tame C++ static initialization problems.
 OBJS := $(SRCS:.cpp=.o)
 
 # List test.cpp first to tame C++ static initialization problems.
-TESTSRCS := adhoc.cpp test.cpp bench1.cpp bench2.cpp validat0.cpp validat1.cpp validat2.cpp validat3.cpp datatest.cpp regtest.cpp fipsalgt.cpp dlltest.cpp
+TESTSRCS := adhoc.cpp test.cpp bench1.cpp bench2.cpp validat0.cpp validat1.cpp validat2.cpp validat3.cpp datatest.cpp regtest1.cpp regtest2.cpp regtest3.cpp fipsalgt.cpp dlltest.cpp
 TESTOBJS := $(TESTSRCS:.cpp=.o)
 LIBOBJS := $(filter-out $(TESTOBJS),$(OBJS))
 
@@ -160,21 +221,27 @@ lean: static dynamic cryptest.exe
 
 .PHONY: clean
 clean:
-	-$(RM) cryptest.exe libcryptopp.a libcryptopp.so$(SOLIB_VERSION_SUFFIX) libcryptopp.dylib
-ifeq ($(HAS_SOLIB_VERSION),1)
-	-$(RM) libcryptopp.so libcryptopp.so$(SOLIB_COMPAT_SUFFIX)
-endif
-	-$(RM) adhoc.cpp.o adhoc.cpp.proto.o $(LIBOBJS) $(TESTOBJS)
-ifneq ($(wildcard *.exe.dSYM),)
-	-$(RM) -r *.exe.dSYM/
-endif
-ifneq ($(wildcard *.dylib.dSYM),)
-	-$(RM) -r *.dylib.dSYM/
-endif
+	-$(RM) adhoc.cpp.o adhoc.cpp.proto.o $(LIBOBJS) $(TESTOBJS) $(DLLOBJS) $(LIBIMPORTOBJS) $(TESTIMPORTOBJS) $(DLLTESTOBJS)
+	@-$(RM) libcryptopp.a libcryptopp.dylib cryptopp.dll libcryptopp.dll.a libcryptopp.import.a
+	@-$(RM) libcryptopp.so libcryptopp.so$(SOLIB_COMPAT_SUFFIX) libcryptopp.so$(SOLIB_VERSION_SUFFIX)
+	@-$(RM) cryptest.exe dlltest.exe cryptest.import.exe cryptest.info ct rdrand-???.o
+	@-$(RM) *.gcno *.gcda *.stackdump core-*
+	@-$(RM) /tmp/adhoc.exe
+	@-$(RM) -r /tmp/cryptopp_test/
+	@-$(RM) -r *.exe.dSYM/
+	@-$(RM) -r *.dylib.dSYM/
+	@-$(RM) -r cov-int/
 
 .PHONY: distclean
 distclean: clean
-	-$(RM) adhoc.cpp adhoc.cpp.copied GNUmakefile.deps cryptopp.tgz *.o *.ii *.s
+	-$(RM) adhoc.cpp adhoc.cpp.copied GNUmakefile.deps benchmarks.html cryptest.txt cryptest-*.txt
+	@-$(RM) CMakeCache.txt Makefile CTestTestfile.cmake cmake_install.cmake cryptopp-config-version.cmake
+	@-$(RM) cryptopp.tgz *.o *.bc *.ii *.s *~
+	@-$(RM) -r CMakeFiles/
+	@-$(RM) -r $(DOCUMENT_DIRECTORY)/
+	@-$(RM) -r TestCoverage/
+	@-$(RM) cryptopp$(LIB_VER)\.*
+	@-$(RM) CryptoPPRef.zip
 
 .PHONY: install
 install:
@@ -210,15 +277,10 @@ remove uninstall:
 	-$(RM) -r $(DESTDIR)$(INCLUDEDIR)/cryptopp
 	-$(RM) $(DESTDIR)$(LIBDIR)/libcryptopp.a
 	-$(RM) $(DESTDIR)$(BINDIR)/cryptest.exe
-ifneq ($(IS_IOS),0)
-	-$(RM) $(DESTDIR)$(LIBDIR)/libcryptopp.dylib
-else
-	-$(RM) $(DESTDIR)$(LIBDIR)/libcryptopp.so$(SOLIB_VERSION_SUFFIX)
-ifeq ($(HAS_SOLIB_VERSION),1)
-	-$(RM) $(DESTDIR)$(LIBDIR)/libcryptopp.so$(SOLIB_COMPAT_SUFFIX)
-	-$(RM) $(DESTDIR)$(LIBDIR)/libcryptopp.so
-endif
-endif
+	@-$(RM) $(DESTDIR)$(LIBDIR)/libcryptopp.dylib
+	@-$(RM) $(DESTDIR)$(LIBDIR)/libcryptopp.so$(SOLIB_VERSION_SUFFIX)
+	@-$(RM) $(DESTDIR)$(LIBDIR)/libcryptopp.so$(SOLIB_COMPAT_SUFFIX)
+	@-$(RM) $(DESTDIR)$(LIBDIR)/libcryptopp.so
 
 libcryptopp.a: $(LIBOBJS)
 	$(AR) $(ARFLAGS) $@ $(LIBOBJS)

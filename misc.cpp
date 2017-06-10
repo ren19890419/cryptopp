@@ -27,8 +27,8 @@ NAMESPACE_BEGIN(CryptoPP)
 
 void xorbuf(byte *buf, const byte *mask, size_t count)
 {
-	CRYPTOPP_ASSERT(buf != NULL);
-	CRYPTOPP_ASSERT(mask != NULL);
+	CRYPTOPP_ASSERT(buf != NULLPTR);
+	CRYPTOPP_ASSERT(mask != NULLPTR);
 	CRYPTOPP_ASSERT(count > 0);
 
 	size_t i=0;
@@ -60,8 +60,8 @@ void xorbuf(byte *buf, const byte *mask, size_t count)
 
 void xorbuf(byte *output, const byte *input, const byte *mask, size_t count)
 {
-	CRYPTOPP_ASSERT(output != NULL);
-	CRYPTOPP_ASSERT(input != NULL);
+	CRYPTOPP_ASSERT(output != NULLPTR);
+	CRYPTOPP_ASSERT(input != NULLPTR);
 	CRYPTOPP_ASSERT(count > 0);
 
 	size_t i=0;
@@ -95,8 +95,8 @@ void xorbuf(byte *output, const byte *input, const byte *mask, size_t count)
 
 bool VerifyBufsEqual(const byte *buf, const byte *mask, size_t count)
 {
-	CRYPTOPP_ASSERT(buf != NULL);
-	CRYPTOPP_ASSERT(mask != NULL);
+	CRYPTOPP_ASSERT(buf != NULLPTR);
+	CRYPTOPP_ASSERT(mask != NULLPTR);
 	CRYPTOPP_ASSERT(count > 0);
 
 	size_t i=0;
@@ -147,7 +147,7 @@ std::string StringNarrow(const wchar_t *str, bool throwOnError)
 	//while (*ptr++) len++;
 	len = wcslen(str)+1;
 
-	err = wcstombs_s(&size, NULL, 0, str, len*sizeof(wchar_t));
+	err = wcstombs_s(&size, NULLPTR, 0, str, len*sizeof(wchar_t));
 	CRYPTOPP_ASSERT(err == 0);
 	if (err != 0)
 	{
@@ -172,7 +172,7 @@ std::string StringNarrow(const wchar_t *str, bool throwOnError)
 	if (!result.empty() && result[size - 1] == '\0')
 		result.erase(size - 1);
 #else
-	size_t size = wcstombs(NULL, str, 0);
+	size_t size = wcstombs(NULLPTR, str, 0);
 	CRYPTOPP_ASSERT(size != (size_t)-1);
 	if (size == (size_t)-1)
 	{
@@ -197,12 +197,76 @@ std::string StringNarrow(const wchar_t *str, bool throwOnError)
 	return result;
 }
 
+std::wstring StringWiden(const char *str, bool throwOnError)
+{
+	CRYPTOPP_ASSERT(str);
+	std::wstring result;
+
+	// Safer functions on Windows for C&A, https://github.com/weidai11/cryptopp/issues/55
+#if (CRYPTOPP_MSC_VERSION >= 1400)
+	size_t len=0, size=0;
+	errno_t err = 0;
+
+	//const char* ptr = str;
+	//while (*ptr++) len++;
+	len = std::strlen(str)+1;
+
+	err = mbstowcs_s(&size, NULLPTR, 0, str, len);
+	CRYPTOPP_ASSERT(err == 0);
+	if (err != 0)
+	{
+		if (throwOnError)
+			throw InvalidArgument("StringWiden: wcstombs_s() call failed with error " + IntToString(err));
+		else
+			return std::wstring();
+	}
+
+	result.resize(size);
+	err = mbstowcs_s(&size, &result[0], size, str, len);
+	CRYPTOPP_ASSERT(err == 0);
+	if (err != 0)
+	{
+		if (throwOnError)
+			throw InvalidArgument("StringWiden: wcstombs_s() call failed with error " + IntToString(err));
+		else
+			return std::wstring();
+	}
+
+	// The safe routine's size includes the NULL.
+	if (!result.empty() && result[size - 1] == '\0')
+		result.erase(size - 1);
+#else
+	size_t size = mbstowcs(NULLPTR, str, 0);
+	CRYPTOPP_ASSERT(size != (size_t)-1);
+	if (size == (size_t)-1)
+	{
+		if (throwOnError)
+			throw InvalidArgument("StringWiden: mbstowcs() call failed");
+		else
+			return std::wstring();
+	}
+
+	result.resize(size);
+	size = mbstowcs(&result[0], str, size);
+	CRYPTOPP_ASSERT(size != (size_t)-1);
+	if (size == (size_t)-1)
+	{
+		if (throwOnError)
+			throw InvalidArgument("StringWiden: mbstowcs() call failed");
+		else
+			return std::wstring();
+	}
+#endif
+
+	return result;
+}
+
 void CallNewHandler()
 {
 	using std::new_handler;
 	using std::set_new_handler;
 
-	new_handler newHandler = set_new_handler(NULL);
+	new_handler newHandler = set_new_handler(NULLPTR);
 	if (newHandler)
 		set_new_handler(newHandler);
 
@@ -218,15 +282,15 @@ void * AlignedAllocate(size_t size)
 {
 	byte *p;
 #if defined(CRYPTOPP_APPLE_ALLOC_AVAILABLE)
-	while ((p = (byte *)calloc(1, size)) == NULL)
+	while ((p = (byte *)calloc(1, size)) == NULLPTR)
 #elif defined(CRYPTOPP_MM_MALLOC_AVAILABLE)
-	while ((p = (byte *)_mm_malloc(size, 16)) == NULL)
+	while ((p = (byte *)_mm_malloc(size, 16)) == NULLPTR)
 #elif defined(CRYPTOPP_MEMALIGN_AVAILABLE)
-	while ((p = (byte *)memalign(16, size)) == NULL)
+	while ((p = (byte *)memalign(16, size)) == NULLPTR)
 #elif defined(CRYPTOPP_MALLOC_ALIGNMENT_IS_16)
-	while ((p = (byte *)malloc(size)) == NULL)
+	while ((p = (byte *)malloc(size)) == NULLPTR)
 #else
-	while ((p = (byte *)malloc(size + 16)) == NULL)
+	while ((p = (byte *)malloc(size + 16)) == NULLPTR)
 #endif
 		CallNewHandler();
 
@@ -257,7 +321,7 @@ void AlignedDeallocate(void *p)
 void * UnalignedAllocate(size_t size)
 {
 	void *p;
-	while ((p = malloc(size)) == NULL)
+	while ((p = malloc(size)) == NULLPTR)
 		CallNewHandler();
 	return p;
 }

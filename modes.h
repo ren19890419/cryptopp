@@ -20,6 +20,14 @@
 # pragma GCC diagnostic ignored "-Wsign-conversion"
 #endif
 
+#if CRYPTOPP_MSC_VERSION
+# pragma warning(push)
+# pragma warning(disable: 4231 4275)
+# if (CRYPTOPP_MSC_VERSION >= 1400)
+#  pragma warning(disable: 6011 6386 28193)
+# endif
+#endif
+
 NAMESPACE_BEGIN(CryptoPP)
 
 //! \class CipherModeDocumentation
@@ -73,7 +81,7 @@ public:
 	}
 
 protected:
-	CipherModeBase() : m_cipher(NULL) {}
+	CipherModeBase() : m_cipher(NULLPTR) {}
 	inline unsigned int BlockSize() const {CRYPTOPP_ASSERT(m_register.size() > 0); return (unsigned int)m_register.size();}
 	virtual void SetFeedbackSize(unsigned int feedbackSize)
 	{
@@ -130,12 +138,15 @@ protected:
 	unsigned int m_feedbackSize;
 };
 
-inline void CopyOrZero(void *dest, const void *src, size_t s)
+inline void CopyOrZero(void *dest, size_t d, const void *src, size_t s)
 {
+	CRYPTOPP_ASSERT(dest);
+	CRYPTOPP_ASSERT(d >= s);
+
 	if (src)
-		memcpy_s(dest, s, src, s);
+		memcpy_s(dest, d, src, s);
 	else
-		memset(dest, 0, s);
+		memset(dest, 0, d);
 }
 
 //! \class OFB_ModePolicy
@@ -172,7 +183,7 @@ protected:
 	unsigned int GetBytesPerIteration() const {return BlockSize();}
 	unsigned int GetIterationsToBuffer() const {return m_cipher->OptimalNumberOfParallelBlocks();}
 	void WriteKeystream(byte *buffer, size_t iterationCount)
-		{OperateKeystream(WRITE_KEYSTREAM, buffer, NULL, iterationCount);}
+		{OperateKeystream(WRITE_KEYSTREAM, buffer, NULLPTR, iterationCount);}
 	bool CanOperateKeystream() const {return true;}
 	void OperateKeystream(KeystreamOperation operation, byte *output, const byte *input, size_t iterationCount);
 	void CipherResynchronize(byte *keystreamBuffer, const byte *iv, size_t length);
@@ -250,7 +261,7 @@ protected:
 	void UncheckedSetKey(const byte *key, unsigned int length, const NameValuePairs &params)
 	{
 		CBC_Encryption::UncheckedSetKey(key, length, params);
-		m_stolenIV = params.GetValueWithDefault(Name::StolenIV(), (byte *)NULL);
+		m_stolenIV = params.GetValueWithDefault(Name::StolenIV(), (byte *)NULLPTR);
 	}
 
 	byte *m_stolenIV;
@@ -472,6 +483,10 @@ struct CBC_CTS_Mode_ExternalCipher : public CipherModeDocumentation
 NAMESPACE_END
 
 // Issue 340
+#if CRYPTOPP_MSC_VERSION
+# pragma warning(pop)
+#endif
+
 #if CRYPTOPP_GCC_DIAGNOSTIC_AVAILABLE
 # pragma GCC diagnostic pop
 #endif

@@ -11,10 +11,12 @@
 #include "config.h"
 #include "cryptlib.h"
 
-// TODO: fix 6011 when the API/ABI can change
-#if (CRYPTOPP_MSC_VERSION >= 1400)
+#if CRYPTOPP_MSC_VERSION
 # pragma warning(push)
-# pragma warning(disable: 6011 28193)
+# pragma warning(disable: 4231 4275)
+# if (CRYPTOPP_MSC_VERSION >= 1400)
+#  pragma warning(disable: 6011 6386 28193)
+# endif
 #endif
 
 #include "smartptr.h"
@@ -34,8 +36,8 @@ public:
 	//! \param deepCopy flag indicating whether the data should be copied
 	//! \details The deepCopy option is used when the NameValuePairs object can't
 	//!   keep a copy of the data available
-	ConstByteArrayParameter(const char *data = NULL, bool deepCopy = false)
-		: m_deepCopy(false), m_data(NULL), m_size(0)
+	ConstByteArrayParameter(const char *data = NULLPTR, bool deepCopy = false)
+		: m_deepCopy(false), m_data(NULLPTR), m_size(0)
 	{
 		Assign((const byte *)data, data ? strlen(data) : 0, deepCopy);
 	}
@@ -47,7 +49,7 @@ public:
 	//! \details The deepCopy option is used when the NameValuePairs object can't
 	//!   keep a copy of the data available
 	ConstByteArrayParameter(const byte *data, size_t size, bool deepCopy = false)
-		: m_deepCopy(false), m_data(NULL), m_size(0)
+		: m_deepCopy(false), m_data(NULLPTR), m_size(0)
 	{
 		Assign(data, size, deepCopy);
 	}
@@ -59,7 +61,7 @@ public:
 	//! \details The deepCopy option is used when the NameValuePairs object can't
 	//!   keep a copy of the data available
 	template <class T> ConstByteArrayParameter(const T &string, bool deepCopy = false)
-		: m_deepCopy(false), m_data(NULL), m_size(0)
+		: m_deepCopy(false), m_data(NULLPTR), m_size(0)
 	{
 		CRYPTOPP_COMPILE_ASSERT(sizeof(typename T::value_type) == 1);
 		Assign((const byte *)string.data(), string.size(), deepCopy);
@@ -107,7 +109,7 @@ public:
 	//! \brief Construct a ByteArrayParameter
 	//! \param data a memory buffer
 	//! \param size the length of the memory buffer
-	ByteArrayParameter(byte *data = NULL, unsigned int size = 0)
+	ByteArrayParameter(byte *data = NULLPTR, unsigned int size = 0)
 		: m_data(data), m_size(size) {}
 
 	//! \brief Construct a ByteArrayParameter
@@ -221,13 +223,13 @@ private:
 };
 
 template <class BASE, class T>
-GetValueHelperClass<T, BASE> GetValueHelper(const T *pObject, const char *name, const std::type_info &valueType, void *pValue, const NameValuePairs *searchFirst=NULL)
+GetValueHelperClass<T, BASE> GetValueHelper(const T *pObject, const char *name, const std::type_info &valueType, void *pValue, const NameValuePairs *searchFirst=NULLPTR)
 {
 	return GetValueHelperClass<T, BASE>(pObject, name, valueType, pValue, searchFirst);
 }
 
 template <class T>
-GetValueHelperClass<T, T> GetValueHelper(const T *pObject, const char *name, const std::type_info &valueType, void *pValue, const NameValuePairs *searchFirst=NULL)
+GetValueHelperClass<T, T> GetValueHelper(const T *pObject, const char *name, const std::type_info &valueType, void *pValue, const NameValuePairs *searchFirst=NULLPTR)
 {
 	return GetValueHelperClass<T, T>(pObject, name, valueType, pValue, searchFirst);
 }
@@ -298,9 +300,11 @@ AssignFromHelperClass<T, T> AssignFromHelper(T *pObject, const NameValuePairs &s
 
 // ********************************************************
 
-// to allow the linker to discard Integer code if not needed.
-typedef bool (CRYPTOPP_API * PAssignIntToInteger)(const std::type_info &valueType, void *pInteger, const void *pInt);
-CRYPTOPP_DLL extern PAssignIntToInteger g_pAssignIntToInteger;
+#ifndef CRYPTOPP_NO_ASSIGN_TO_INTEGER
+// Allow the linker to discard Integer code if not needed.
+// Also see http://github.com/weidai11/cryptopp/issues/389.
+CRYPTOPP_DLL bool AssignIntToInteger(const std::type_info &valueType, void *pInteger, const void *pInt);
+#endif
 
 CRYPTOPP_DLL const std::type_info & CRYPTOPP_API IntegerTypeId();
 
@@ -386,8 +390,10 @@ public:
 
 	void AssignValue(const char *name, const std::type_info &valueType, void *pValue) const
 	{
-		// special case for retrieving an Integer parameter when an int was passed in
-		if (!(g_pAssignIntToInteger != NULL && typeid(T) == typeid(int) && g_pAssignIntToInteger(valueType, pValue, &m_value)))
+#ifndef CRYPTOPP_NO_ASSIGN_TO_INTEGER
+		// Special case for retrieving an Integer parameter when an int was passed in
+		if (!(typeid(T) == typeid(int) && AssignIntToInteger(valueType, pValue, &m_value)))
+#endif
 		{
 			NameValuePairs::ThrowIfTypeMismatch(name, typeid(T), valueType);
 			*reinterpret_cast<T *>(pValue) = m_value;

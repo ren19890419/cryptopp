@@ -78,7 +78,7 @@ private:
 # pragma comment(lib, "bcrypt.lib")
 #endif
 
-#endif //CRYPTOPP_WIN32_AVAILABLE
+#endif // CRYPTOPP_WIN32_AVAILABLE
 
 //! \class NonblockingRng
 //! \brief Wrapper class for /dev/random and /dev/srandom
@@ -87,9 +87,12 @@ private:
 class CRYPTOPP_DLL NonblockingRng : public RandomNumberGenerator
 {
 public:
+	CRYPTOPP_STATIC_CONSTEXPR const char* StaticAlgorithmName() { return "NonblockingRng"; }
+
+	~NonblockingRng();
+
 	//! \brief Construct a NonblockingRng
 	NonblockingRng();
-	~NonblockingRng();
 
 	//! \brief Generate random array of bytes
 	//! \param output the byte buffer
@@ -115,9 +118,12 @@ protected:
 class CRYPTOPP_DLL BlockingRng : public RandomNumberGenerator
 {
 public:
+	CRYPTOPP_STATIC_CONSTEXPR const char* StaticAlgorithmName() { return "BlockingRng"; }
+
+	~BlockingRng();
+
 	//! \brief Construct a BlockingRng
 	BlockingRng();
-	~BlockingRng();
 
 	//! \brief Generate random array of bytes
 	//! \param output the byte buffer
@@ -143,7 +149,6 @@ protected:
 //!  by way of BlockingRng, if available.
 CRYPTOPP_DLL void CRYPTOPP_API OS_GenerateRandomBlock(bool blocking, byte *output, size_t size);
 
-
 //! \class AutoSeededRandomPool
 //! \brief Automatically Seeded Randomness Pool
 //! \details This class seeds itself using an operating system provided RNG.
@@ -151,6 +156,10 @@ CRYPTOPP_DLL void CRYPTOPP_API OS_GenerateRandomBlock(bool blocking, byte *outpu
 class CRYPTOPP_DLL AutoSeededRandomPool : public RandomPool
 {
 public:
+	CRYPTOPP_STATIC_CONSTEXPR const char* StaticAlgorithmName() { return "AutoSeededRandomPool"; }
+
+	~AutoSeededRandomPool() {}
+
 	//! \brief Construct an AutoSeededRandomPool
 	//! \param blocking controls seeding with BlockingRng or NonblockingRng
 	//! \param seedSize the size of the seed, in bytes
@@ -178,6 +187,10 @@ template <class BLOCK_CIPHER>
 class AutoSeededX917RNG : public RandomNumberGenerator, public NotCopyable
 {
 public:
+	static std::string StaticAlgorithmName() { return std::string("AutoSeededX917RNG(") + BLOCK_CIPHER::StaticAlgorithmName() + std::string(")"); }
+
+	~AutoSeededX917RNG() {}
+
 	//! \brief Construct an AutoSeededX917RNG
 	//! \param blocking controls seeding with BlockingRng or NonblockingRng
 	//! \param autoSeed controls auto seeding of the generator
@@ -194,7 +207,7 @@ public:
 	//! \details Internally, the generator uses SHA256 to extract the entropy from
 	//!   from the seed and then stretch the material for the block cipher's key
 	//!   and initialization vector.
-	void Reseed(bool blocking = false, const byte *additionalEntropy = NULL, size_t length = 0);
+	void Reseed(bool blocking = false, const byte *additionalEntropy = NULLPTR, size_t length = 0);
 
 	//! \brief Deterministically reseed an AutoSeededX917RNG for testing
 	//! \param key the key to use for the deterministic reseeding
@@ -239,7 +252,7 @@ void AutoSeededX917RNG<BLOCK_CIPHER>::Reseed(bool blocking, const byte *input, s
 	}	// check that seed and key don't have same value
 	while (memcmp(key, seed, STDMIN((unsigned int)BLOCK_CIPHER::BLOCKSIZE, (unsigned int)BLOCK_CIPHER::DEFAULT_KEYLENGTH)) == 0);
 
-	Reseed(key, BLOCK_CIPHER::DEFAULT_KEYLENGTH, seed, NULL);
+	Reseed(key, BLOCK_CIPHER::DEFAULT_KEYLENGTH, seed, NULLPTR);
 }
 
 CRYPTOPP_DLL_TEMPLATE_CLASS AutoSeededX917RNG<AES>;

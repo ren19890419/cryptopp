@@ -68,7 +68,7 @@ public:
 	CRYPTOPP_CONSTANT(DIGESTSIZE=T::BLOCKSIZE)
 	CRYPTOPP_CONSTANT(BLOCKSIZE=T::BLOCKSIZE)
 
-	Poly1305_Base() : m_used(true) {}
+	Poly1305_Base() : m_idx(0), m_used(true) {}
 
 	void Resynchronize (const byte *iv, int ivLength=-1);
 	void GetNextIV (RandomNumberGenerator &rng, byte *iv);
@@ -160,7 +160,7 @@ public:
 	//!   bytes used for <tt>r</tt>.
 	//! \details Each message requires a unique security context. You can use GetNextIV() and
 	//!   Resynchronize() to set a new nonce under a key for a message.
-	Poly1305(const byte *key, size_t keyLength=DEFAULT_KEYLENGTH, const byte *nonce=NULL, size_t nonceLength=0)
+	Poly1305(const byte *key, size_t keyLength=DEFAULT_KEYLENGTH, const byte *nonce=NULLPTR, size_t nonceLength=0)
 		{this->SetKey(key, keyLength, MakeParameters(Name::IV(), ConstByteArrayParameter(nonce, nonceLength)));}
 };
 

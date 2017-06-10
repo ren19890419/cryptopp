@@ -67,7 +67,7 @@ void CFB_ModePolicy::TransformRegister()
 void CFB_ModePolicy::CipherResynchronize(const byte *iv, size_t length)
 {
 	CRYPTOPP_ASSERT(length == BlockSize());
-	CopyOrZero(m_register, iv, length);
+	CopyOrZero(m_register, m_register.size(), iv, length);
 	TransformRegister();
 }
 
@@ -90,7 +90,7 @@ void OFB_ModePolicy::WriteKeystream(byte *keystreamBuffer, size_t iterationCount
 	unsigned int s = BlockSize();
 	m_cipher->ProcessBlock(m_register, keystreamBuffer);
 	if (iterationCount > 1)
-		m_cipher->AdvancedProcessBlocks(keystreamBuffer, NULL, keystreamBuffer+s, s*(iterationCount-1), 0);
+		m_cipher->AdvancedProcessBlocks(keystreamBuffer, NULLPTR, keystreamBuffer+s, s*(iterationCount-1), 0);
 	memcpy(m_register, keystreamBuffer+s*(iterationCount-1), s);
 }
 
@@ -99,7 +99,7 @@ void OFB_ModePolicy::CipherResynchronize(byte *keystreamBuffer, const byte *iv, 
 	CRYPTOPP_UNUSED(keystreamBuffer), CRYPTOPP_UNUSED(length);
 	CRYPTOPP_ASSERT(length == BlockSize());
 
-	CopyOrZero(m_register, iv, length);
+	CopyOrZero(m_register, m_register.size(), iv, length);
 }
 
 void CTR_ModePolicy::SeekToIteration(lword iterationCount)
@@ -144,7 +144,7 @@ void CTR_ModePolicy::CipherResynchronize(byte *keystreamBuffer, const byte *iv, 
 	CRYPTOPP_UNUSED(keystreamBuffer), CRYPTOPP_UNUSED(length);
 	CRYPTOPP_ASSERT(length == BlockSize());
 
-	CopyOrZero(m_register, iv, length);
+	CopyOrZero(m_register, m_register.size(), iv, length);
 	m_counterArray = m_register;
 }
 
@@ -169,7 +169,7 @@ void BlockOrientedCipherModeBase::ResizeBuffers()
 void ECB_OneWay::ProcessData(byte *outString, const byte *inString, size_t length)
 {
 	CRYPTOPP_ASSERT(length%BlockSize()==0);
-	m_cipher->AdvancedProcessBlocks(inString, NULL, outString, length, BlockTransformation::BT_AllowParallel);
+	m_cipher->AdvancedProcessBlocks(inString, NULLPTR, outString, length, BlockTransformation::BT_AllowParallel);
 }
 
 void CBC_Encryption::ProcessData(byte *outString, const byte *inString, size_t length)

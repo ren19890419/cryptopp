@@ -8,6 +8,10 @@
 #include "cryptlib.h"
 #include "channels.h"
 
+#if CRYPTOPP_MSC_VERSION
+# pragma warning(disable: 4355)
+#endif
+
 NAMESPACE_BEGIN(CryptoPP)
 
 #if 0
@@ -239,7 +243,7 @@ byte * ChannelSwitch::ChannelCreatePutSpace(const std::string &channel, size_t &
 			return target.ChannelCreatePutSpace(ch, size);
 	}
 	size = 0;
-	return NULL;
+	return NULLPTR;
 }
 
 size_t ChannelSwitch::ChannelPutModifiable2(const std::string &channel, byte *inString, size_t length, int messageEnd, bool blocking)
@@ -261,7 +265,7 @@ size_t ChannelSwitch::ChannelPutModifiable2(const std::string &channel, byte *in
 
 void ChannelSwitch::AddDefaultRoute(BufferedTransformation &destination)
 {
-	m_defaultRoutes.push_back(DefaultRoute(&destination, value_ptr<std::string>(NULL)));
+	m_defaultRoutes.push_back(DefaultRoute(&destination, value_ptr<std::string>(NULLPTR)));
 }
 
 void ChannelSwitch::RemoveDefaultRoute(BufferedTransformation &destination)

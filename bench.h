@@ -6,26 +6,47 @@
 
 #include "cryptlib.h"
 
+#include <iostream>
+#include <iomanip>
+#include <cmath>
+#include <ctime>
+
 NAMESPACE_BEGIN(CryptoPP)
 NAMESPACE_BEGIN(Test)
 
-ANONYMOUS_NAMESPACE_BEGIN
-#ifdef CLOCKS_PER_SEC
-const double CLOCK_TICKS_PER_SECOND = (double)CLOCKS_PER_SEC;
-#elif defined(CLK_TCK)
-const double CLOCK_TICKS_PER_SECOND = (double)CLK_TCK;
-#else
-const double CLOCK_TICKS_PER_SECOND = 1000000.0;
-#endif
+// More granular control over benchmarks
+enum TestClass {
+	Unkeyed=1,SharedKeyMAC=2,SharedKeyStream=4,SharedKeyBlock=8,SharedKeyOther=16,
+	PublicKeyAgreement=32,PublicKeyEncryption=64,PublicKeySignature=128,PublicKeyOther=256,
+	SharedKey=SharedKeyMAC|SharedKeyStream|SharedKeyBlock|SharedKeyOther,
+	PublicKey=PublicKeyAgreement|PublicKeyEncryption|PublicKeySignature|PublicKeyOther,
+	All=Unkeyed|SharedKey|PublicKey
+};
 
-static const byte defaultKey[] = "0123456789" // 168 + NULL
-	"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	"00000000000000000000000000000000000000000000000000000"
-	"00000000000000000000000000000000000000000000000000000";
-NAMESPACE_END
+extern const double CLOCK_TICKS_PER_SECOND;
+extern double g_allocatedTime;
+extern double g_hertz;
+extern double g_logTotal;
+extern unsigned int g_logCount;
+extern const byte defaultKey[];
 
-void BenchmarkAll(double t, double hertz);
-void BenchmarkAll2(double t, double hertz);
+// Test book keeping
+extern time_t g_testBegin;
+extern time_t g_testEnd;
+
+// Command handler
+void BenchmarkWithCommand(int argc, const char* const argv[]);
+// Top level, prints preamble and postamble
+void Benchmark(Test::TestClass suites, double t, double hertz);
+// Unkeyed systems
+void Benchmark1(double t, double hertz);
+// Shared key systems
+void Benchmark2(double t, double hertz);
+// Public key systems
+void Benchmark3(double t, double hertz);
+
+void OutputResultBytes(const char *name, double length, double timeTaken);
+void OutputResultOperations(const char *name, const char *operation, bool pc, unsigned long iterations, double timeTaken);
 
 NAMESPACE_END  // Test
 NAMESPACE_END  // CryptoPP
